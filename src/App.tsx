@@ -1,23 +1,91 @@
+import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { 
   MessageSquare, PhoneMissed, Clock, ArrowRight, ShieldCheck, 
   Download, Zap, Check, Lock, ChevronDown, CheckCircle2 
 } from 'lucide-react';
-import Chatbot from './Chatbot';
 import { useCountdown } from './hooks';
-import { ExitPopup, FeatureCard, StatCard, FeatureListItem } from './components';
+import { ExitPopup, FeatureCard, StatCard, FeatureListItem, CheckoutModal } from './components';
 
 export default function App() {
   const countdown = useCountdown(15);
-  
-  const scrollToOffer = () => {
-    document.getElementById('offer')?.scrollIntoView({ behavior: 'smooth' });
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  const handlePayment = async (customerInfo: { firstName: string, lastName: string, email: string, phone: string }) => {
+    setIsProcessing(true);
+    const res = await loadRazorpayScript();
+
+    if (!res) {
+      alert("Razorpay SDK failed to load. Are you online?");
+      setIsProcessing(false);
+      return;
+    }
+
+    try {
+      // Create backend order
+      const orderResponse = await fetch("/api/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: 9, currency: "INR" }),
+      });
+      
+      const orderData = await orderResponse.json();
+      
+      if (orderData.error) {
+        alert("Configuration Error: " + orderData.error);
+        setIsProcessing(false);
+        return;
+      }
+
+      // Initialize Razorpay modal
+      const options = {
+        key: (import.meta as any).env.VITE_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID, // Use provided key
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: "AI Bookings",
+        description: "AI Booking Blueprint",
+        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cb/Stripe_Logo%2C_revised_2016.svg/2560px-Stripe_Logo%2C_revised_2016.svg.png",
+        order_id: orderData.id,
+        handler: function (response: any) {
+          alert(`Payment Successful! Payment ID: ${response.razorpay_payment_id}`);
+          // Provide redirect or access logic here
+        },
+        prefill: {
+          name: `${customerInfo.firstName} ${customerInfo.lastName}`,
+          email: customerInfo.email,
+          contact: customerInfo.phone,
+        },
+        theme: {
+          color: "#eab308",
+        },
+      };
+
+      const paymentObject = new (window as any).Razorpay(options);
+      paymentObject.open();
+      setIsProcessing(false);
+      setIsCheckoutOpen(false);
+    } catch (err) {
+      console.error(err);
+      alert("Payment initiation failed. Please try again.");
+      setIsProcessing(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-[#05070a] text-[#ffffff] font-sans selection:bg-[#c4a456]/30">
-      <ExitPopup scrollToOffer={scrollToOffer} />
-      <Chatbot />
+      <ExitPopup openCheckout={() => setIsCheckoutOpen(true)} />
+      <CheckoutModal isOpen={isCheckoutOpen} onClose={() => setIsCheckoutOpen(false)} onSubmit={handlePayment} isProcessing={isProcessing} />
 
       {/* Sticky Top Banner */}
       <div className="bg-[#0f1218] text-[#c4a456] py-2.5 px-4 text-center text-[11px] font-[700] uppercase tracking-[1px] border-b border-[#c4a456]/20">
@@ -45,7 +113,7 @@ export default function App() {
             Hotels & restaurants are adding <strong className="text-white">₹4L–₹12L/month</strong> just by replying instantly to customers — even while they sleep.
           </p>
           <motion.button 
-            onClick={scrollToOffer}
+            onClick={() => setIsCheckoutOpen(true)}
             whileHover={{ scale: 1.02 }} 
             whileTap={{ scale: 0.98 }} 
             className="w-full sm:w-auto px-10 py-5 bg-[#eab308] text-[#000] rounded-md font-[800] uppercase tracking-[0.5px] text-lg shadow-[0_4px_15px_rgba(234,179,8,0.3)] flex items-center justify-center gap-3 mx-auto transition-transform"
@@ -183,7 +251,7 @@ export default function App() {
                 </div>
                 <p className="text-sm text-[#c4a456] font-bold mb-8">Instant Digital Delivery</p>
                 
-                <button onClick={() => alert("Redirecting to Razorpay checkout...")} className="w-full py-5 px-6 bg-[#eab308] hover:bg-[#c4a456] text-[#000] rounded-md font-[800] uppercase tracking-[0.5px] text-lg shadow-[0_4px_15px_rgba(234,179,8,0.3)] transition-all">
+                <button onClick={() => setIsCheckoutOpen(true)} className="w-full py-5 px-6 bg-[#eab308] hover:bg-[#c4a456] text-[#000] rounded-md font-[800] uppercase tracking-[0.5px] text-lg shadow-[0_4px_15px_rgba(234,179,8,0.3)] transition-all">
                   Get Instant Access
                 </button>
                 <p className="mt-4 flex items-center justify-center gap-1.5 text-xs text-[#94a3b8] font-medium">
@@ -249,7 +317,7 @@ export default function App() {
            <div className="max-w-3xl mx-auto">
              <h2 className="text-4xl md:text-5xl font-black mb-6 text-white tracking-tight">Every missed message is a lost booking.</h2>
              <p className="text-xl text-[#94a3b8] mb-10">Stop leaving money on the table. Secure your blueprint now.</p>
-             <button onClick={scrollToOffer} className="w-full sm:w-auto px-10 py-5 bg-[#eab308] hover:bg-[#c4a456] text-[#000] rounded-md font-[800] uppercase tracking-[0.5px] text-lg shadow-[0_4px_15px_rgba(234,179,8,0.3)] transition-all flex justify-center items-center gap-2 mb-4 mx-auto">
+             <button onClick={() => setIsCheckoutOpen(true)} className="w-full sm:w-auto px-10 py-5 bg-[#eab308] hover:bg-[#c4a456] text-[#000] rounded-md font-[800] uppercase tracking-[0.5px] text-lg shadow-[0_4px_15px_rgba(234,179,8,0.3)] transition-all flex justify-center items-center gap-2 mb-4 mx-auto">
                Get the ₹9 Blueprint Now
              </button>
              <div className="flex justify-center items-center gap-4 text-sm text-[#94a3b8] font-medium mt-4">
@@ -270,7 +338,7 @@ export default function App() {
           AI Booking Blueprint<br/>
           <span className="text-[#eab308] text-base">₹9 only</span> <span className="line-through text-[#94a3b8] text-xs font-normal">₹1,999</span>
         </div>
-        <button onClick={scrollToOffer} className="bg-[#eab308] text-[#000] px-6 py-2.5 rounded-md font-bold text-sm tracking-wide uppercase">
+        <button onClick={() => setIsCheckoutOpen(true)} className="bg-[#eab308] text-[#000] px-6 py-2.5 rounded-md font-bold text-sm tracking-wide uppercase">
           Get Now
         </button>
       </div>

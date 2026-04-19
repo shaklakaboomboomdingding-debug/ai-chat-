@@ -3,7 +3,7 @@ import { AlertTriangle, X, ShieldCheck } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useExitIntent } from './hooks';
 
-export function ExitPopup({ scrollToOffer }: { scrollToOffer: () => void }) {
+export function ExitPopup({ openCheckout }: { openCheckout: () => void }) {
   const { triggered, setTriggered } = useExitIntent();
 
   if (!triggered) return null;
@@ -29,7 +29,7 @@ export function ExitPopup({ scrollToOffer }: { scrollToOffer: () => void }) {
              </p>
            </div>
            <button 
-             onClick={() => { setTriggered(false); scrollToOffer(); }} 
+             onClick={() => { setTriggered(false); openCheckout(); }} 
              className="w-full bg-[#eab308] hover:bg-[#c4a456] text-[#000] px-6 py-4 rounded-md font-[800] uppercase tracking-[0.5px] text-lg mb-4 shadow-[0_4px_15px_rgba(234,179,8,0.3)] transition-transform hover:scale-[1.02]"
            >
              Yes, I Want More Bookings!
@@ -72,5 +72,72 @@ export function FeatureListItem({ text }: { text: string }) {
       </div>
       <span className="text-[#94a3b8] text-sm md:text-base leading-relaxed">{text}</span>
     </li>
+  );
+}
+
+export function CheckoutModal({ 
+  isOpen, 
+  onClose, 
+  onSubmit, 
+  isProcessing 
+}: { 
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (data: { firstName: string, lastName: string, email: string, phone: string }) => void;
+  isProcessing: boolean;
+}) {
+  const [formData, setFormData] = React.useState({ firstName: '', lastName: '', email: '', phone: '' });
+
+  if (!isOpen) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit(formData);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-[#05070a]/90 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
+      <motion.div 
+        initial={{ scale: 0.9, opacity: 0 }} 
+        animate={{ scale: 1, opacity: 1 }} 
+        className="bg-[#0f1218] border border-[#c4a456]/20 w-full max-w-md rounded-xl p-8 relative shadow-[0_0_30px_rgba(196,164,86,0.15)]"
+      >
+        <button onClick={onClose} className="absolute top-4 right-4 text-[#94a3b8] hover:text-white">
+          <X className="w-6 h-6" />
+        </button>
+        <h2 className="text-2xl font-bold mb-2 text-[#ffffff]">Complete Your Details</h2>
+        <p className="text-[#94a3b8] mb-6 text-sm">Where should we send your AI Booking Blueprint?</p>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-[#c4a456] mb-1 uppercase tracking-wide">First Name</label>
+              <input required type="text" value={formData.firstName} onChange={e => setFormData({...formData, firstName: e.target.value})} className="w-full bg-[#05070a] border border-[#c4a456]/30 rounded-md px-4 py-2.5 text-white focus:outline-none focus:border-[#c4a456]" placeholder="John" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-[#c4a456] mb-1 uppercase tracking-wide">Last Name</label>
+              <input required type="text" value={formData.lastName} onChange={e => setFormData({...formData, lastName: e.target.value})} className="w-full bg-[#05070a] border border-[#c4a456]/30 rounded-md px-4 py-2.5 text-white focus:outline-none focus:border-[#c4a456]" placeholder="Doe" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-[#c4a456] mb-1 uppercase tracking-wide">Email Address</label>
+            <input required type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="w-full bg-[#05070a] border border-[#c4a456]/30 rounded-md px-4 py-2.5 text-white focus:outline-none focus:border-[#c4a456]" placeholder="john@example.com" />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-[#c4a456] mb-1 uppercase tracking-wide">Phone Number</label>
+            <input required type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="w-full bg-[#05070a] border border-[#c4a456]/30 rounded-md px-4 py-2.5 text-white focus:outline-none focus:border-[#c4a456]" placeholder="+91 9876543210" />
+          </div>
+
+          <button 
+            type="submit"
+            disabled={isProcessing}
+            className="w-full mt-6 bg-[#eab308] hover:bg-[#c4a456] text-[#000] px-6 py-4 rounded-md font-[800] uppercase tracking-[0.5px] text-lg shadow-[0_4px_15px_rgba(234,179,8,0.3)] transition-transform hover:scale-[1.02] disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            <ShieldCheck className="w-5 h-5" />
+            {isProcessing ? "Processing..." : "Proceed to Payment (₹9)"}
+          </button>
+        </form>
+      </motion.div>
+    </div>
   );
 }
