@@ -50,7 +50,7 @@ export default function App() {
 
       // Initialize Razorpay modal
       const options = {
-        key: (import.meta as any).env?.VITE_RAZORPAY_KEY_ID || "", // Use provided public key
+        key: orderData.key_id, // Dynamically pulled from backend
         amount: orderData.amount,
         currency: orderData.currency,
         name: "AI Bookings",

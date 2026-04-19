@@ -32,7 +32,12 @@ export default async function handler(req: express.Request, res: express.Respons
     };
 
     const order = await razorpay.orders.create(options);
-    return res.status(200).json(order);
+    
+    // Inject the public key into the response to avoid static-build variable loss on the frontend
+    return res.status(200).json({ 
+      ...order, 
+      key_id: process.env.VITE_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID 
+    });
   } catch (error) {
     console.error("Payment Order Error:", error);
     return res.status(500).json({ error: "Failed to create order" });
