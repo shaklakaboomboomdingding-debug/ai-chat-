@@ -1,10 +1,9 @@
-import express from "express";
 import Razorpay from "razorpay";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-export default async function handler(req: express.Request, res: express.Response) {
+export default async function handler(req: any, res: any) {
   // Only allow POST requests for creating orders
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });

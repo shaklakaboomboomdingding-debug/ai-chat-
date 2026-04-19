@@ -2,7 +2,8 @@ import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import dotenv from "dotenv";
-import createOrderHandler from "./src/api/createorder.ts";
+import createOrderHandler from "./api/create-order.ts";
+import webhookHandler from "./api/razorpay-webhook.ts";
 
 dotenv.config();
 
@@ -16,18 +17,7 @@ async function startServer() {
   app.all("/api/create-order", createOrderHandler);
 
   // API Route to handle Razorpay Webhooks
-  app.post("/api/razorpay-webhook", (req, res) => {
-    try {
-      console.log("🔔 Razorpay Webhook Event Received Payload:");
-      console.dir(req.body, { depth: null });
-      
-      // Acknowledging the webhook to Razorpay so it doesn't repeatedly retry 
-      res.status(200).send("OK");
-    } catch (error) {
-      console.error("Webhook processing error:", error);
-      res.status(500).send("Internal Server Error");
-    }
-  });
+  app.post("/api/razorpay-webhook", webhookHandler);
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
